@@ -1,0 +1,70 @@
+version: "3.7"
+
+networks:
+  disputes-network:
+    driver: bridge
+
+services:
+  disputes-nginx:
+    restart: always
+    container_name: disputes-nginx
+    build:
+      context: ./.docker/nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - disputes-php
+    ports:
+      - "80:80"
+    volumes:
+      - "./.:/app/"
+    networks:
+      - disputes-network
+
+  disputes-php:
+    restart: always
+    container_name: disputes-php
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - disputes-postgres
+    env_file:
+      - ./.env
+    volumes:
+      - ".:/app"
+    networks:
+      - disputes-network
+
+
+  disputes-postgres:
+    restart: always
+    build:
+      context: ./.docker/postgres
+      dockerfile: Dockerfile
+    container_name: disputes-postgres
+    ports:
+      - "5436:5432"
+    environment:
+      - POSTGRES_USER=disputes
+      - POSTGRES_PASSWORD=password
+    networks:
+      - disputes-network
+    volumes:
+      - "./.data/database/postgres/data:/var/lib/postgresql/data"
+
+
+  disputes-redis:
+    restart: always
+    build:
+      context: ./.docker/redis
+      dockerfile: Dockerfile
+    container_name: disputes-redis
+    volumes:
+      - ./.data/storage/redis/redis-data:/var/lib/redis
+      - ./.data/storage/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    ports:
+      - "6379:6379"
+    networks:
+      - disputes-network
